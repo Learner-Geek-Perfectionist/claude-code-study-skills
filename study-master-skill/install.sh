@@ -6,6 +6,8 @@ set -euo pipefail
 CLAUDE_DIR="$HOME/.claude"
 SKILLS_DIR="$CLAUDE_DIR/skills"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
+SETTINGS_DIR="$CLAUDE_DIR/settings"
+SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Skill name (extracted from SKILL.md frontmatter)
@@ -36,7 +38,60 @@ if [ -d "$SCRIPT_DIR/hooks" ]; then
     echo ""
 fi
 
-# 3. Success message
+# 3. Register hooks in settings.json
+if [ -f "$HOOKS_DIR/check-study_master.sh" ]; then
+    echo "📝 Registering hooks in settings.json..."
+    mkdir -p "$SETTINGS_DIR"
+
+    # Initialize settings.json if not exists
+    [ ! -f "$SETTINGS_FILE" ] && echo '{}' > "$SETTINGS_FILE"
+
+    # Use Python to safely merge hook configuration
+    python3 << 'PYTHON_SCRIPT'
+import json
+import sys
+import os
+
+settings_file = os.path.expanduser("~/.claude/settings/settings.json")
+hooks_dir = os.path.expanduser("~/.claude/hooks")
+
+# Read existing settings
+with open(settings_file, 'r') as f:
+    settings = json.load(f)
+
+# Ensure hooks array exists
+if 'hooks' not in settings:
+    settings['hooks'] = []
+
+# Hook configuration
+hook_config = {
+    "name": "study-master-validator",
+    "event": "PostToolUse",
+    "tool": "Write",
+    "command": f"{hooks_dir}/check-study_master.sh"
+}
+
+# Check if hook already exists
+existing = next((h for h in settings['hooks'] if h.get('name') == 'study-master-validator'), None)
+
+if existing:
+    # Update existing hook
+    existing.update(hook_config)
+    print("✅ Updated existing hook configuration")
+else:
+    # Add new hook
+    settings['hooks'].append(hook_config)
+    print("✅ Added new hook configuration")
+
+# Write back
+with open(settings_file, 'w') as f:
+    json.dump(settings, f, indent=2)
+PYTHON_SCRIPT
+
+    echo ""
+fi
+
+# 4. Success message
 echo "🎉 Installation complete!"
 echo ""
 echo "Installed components:"

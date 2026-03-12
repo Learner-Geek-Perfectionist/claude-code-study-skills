@@ -70,11 +70,30 @@ class FormatValidator:
                     self.errors.append(ValidationError(i, 'math-symbol', f"Unicode 数学符号 '{char}' 应替换为 {latex}"))
 
     def check_ascii_art(self):
-        """检查 ASCII art"""
-        pattern = r'[\u2500-\u257F]|[┌┐└┘├┤┬┴┼─│]'
+        """检查 ASCII art（包括 ASCII 和 Unicode box-drawing）"""
+        # Unicode box-drawing 字符
+        unicode_pattern = r'[\u2500-\u257F]|[┌┐└┘├┤┬┴┼─│]'
+        # ASCII 表格模式：连续的 +---+ 或 |...|（排除代码块内）
+        ascii_table_pattern = r'^\s*[+|][-=+|]{3,}'
+
+        in_code_block = False
         for i, line in enumerate(self.lines, 1):
-            if re.search(pattern, line):
-                self.errors.append(ValidationError(i, 'ascii-art', "禁止使用 ASCII art，请使用 Mermaid 图表"))
+            # 跟踪代码块状态
+            if line.strip().startswith('```'):
+                in_code_block = not in_code_block
+                continue
+
+            # 代码块内跳过检查
+            if in_code_block:
+                continue
+
+            # 检测 Unicode box-drawing
+            if re.search(unicode_pattern, line):
+                self.errors.append(ValidationError(i, 'ascii-art', "禁止使用 Unicode box-drawing 字符，请使用 Mermaid 图表"))
+
+            # 检测 ASCII 表格
+            if re.match(ascii_table_pattern, line):
+                self.errors.append(ValidationError(i, 'ascii-art', "禁止使用 ASCII 表格（+---+ 或 |---|），请使用 Mermaid 图表或 Markdown 表格"))
 
     def check_code_block_languages(self):
         """检查代码块语言标识"""
