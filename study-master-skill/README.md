@@ -9,16 +9,41 @@
 - **多层次展示**：调用关系图 → 伪代码 → 真实代码 → 实现细节
 - **教科书风格**：结构化、渐进式、有逻辑关联
 - **实时进度**：生成过程中显示当前进度
+- **智能查找**：自动定位源码位置
+
+## 推荐目录结构
+
+```
+project-root/
+├── src/                    # 源码目录
+│   └── <module-name>/      # 要学习的源码模块
+├── docs/                   # 协议规范文档
+│   └── <spec-name>/
+└── study/                  # 生成的学习文档（自动创建）
+    ├── <topic1>/
+    └── <topic2>/
+```
+
+**优势**：
+- 清晰分离源码、文档、学习材料
+- 自动查找源码，无需手动指定路径
+- 支持学习多个主题
 
 ## 使用方式
 
-### 基本用法
+### 基本用法（自动查找源码）
 
 ```bash
 /study-master <topic>
 ```
 
-### 指定源码路径
+skill 会自动在以下位置查找源码：
+1. `src/<topic>/` - 精确匹配
+2. `src/*<topic>*/` - 模糊匹配
+3. `docs/<topic>/` - 协议文档
+4. `./<topic>/` - 根目录
+
+### 手动指定源码路径
 
 ```bash
 /study-master <topic> --source <path>
@@ -26,17 +51,48 @@
 
 ## 示例
 
-学习 Redis 源码：
+### 示例 1：使用推荐目录结构
+
+假设你的项目结构如下：
+
+```
+my-project/
+├── src/
+│   ├── redis/
+│   └── nginx/
+└── study/          # 自动创建
+```
+
+学习 Redis 源码（自动查找）：
+
+```bash
+/study-master redis
+```
+
+生成的文档位于：`study/redis/`
+
+### 示例 2：手动指定路径
+
+学习外部项目：
 
 ```bash
 /study-master redis --source /path/to/redis
 ```
 
-学习 TCP/IP 协议：
+### 示例 3：学习协议规范
+
+```
+my-project/
+├── docs/
+│   └── tcp-ip-specs/
+└── study/
+```
 
 ```bash
 /study-master tcp-ip
 ```
+
+生成的文档位于：`study/tcp-ip/`
 
 ## 生成的文档结构
 
@@ -50,23 +106,19 @@
 └── .study-meta.json        # 元数据
 ```
 
-## Format Validator Hook
+## 安装
 
-项目包含一个格式检查工具，用于验证生成的文档是否符合规范。
-
-### 使用方式
-
-检查单个文件：
+运行安装脚本，将 skill 和 hooks 安装到 Claude：
 
 ```bash
-~/.claude/hooks/format-validator.sh <file.md>
+./install.sh
 ```
 
-检查整个目录：
+安装内容：
+- Skill 文件：`~/.claude/skills/study-master.md`
+- 格式验证 hooks：`~/.claude/hooks/`
 
-```bash
-~/.claude/hooks/format-validator.sh <topic>/
-```
+安装后即可使用 `/study-master` 命令。
 
 ### 检查项
 
@@ -76,6 +128,7 @@
 - ❌ Unicode 数学符号（应使用 LaTeX）
 - ❌ 无语言标识的代码块
 - ❌ U+FFFD 乱码字符
+- ❌ 源码位置格式错误
 
 ## 文档特点
 
