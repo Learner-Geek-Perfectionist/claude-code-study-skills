@@ -126,13 +126,6 @@ learning-skills/
 │   └── hooks/
 │       ├── check-study_master.sh   # PostToolUse hook（shell 入口）
 │       └── validate_study_master.py # 格式校验器（Python）
-└── docs/plans/                     # 设计文档与实现计划
-    ├── 2026-03-12-study-master-skill-design.md
-    ├── 2026-03-12-study-master-implementation.md
-    ├── 2026-03-13-study-master-simplification-design.md
-    ├── 2026-03-13-study-master-simplification-plan.md
-    ├── 2026-03-13-subagent-chapter-generation-design.md
-    └── 2026-03-13-subagent-chapter-generation-plan.md
 ```
 
 ### 模块化设计
@@ -152,8 +145,6 @@ SKILL.md 仅保留核心工作流（~160 行），将细节拆分到独立文件
 | v1 — 初始设计 | 单对话生成所有章节，SKILL.md 含全部细节（~333 行） |
 | v2 — 模块化拆分 | SKILL.md 精简至 ~120 行，拆分出 3 个辅助文件 |
 | v3 — Subagent 架构 | 引入分布式生成：主对话分析 + subagent 并行写作，解决大项目上下文溢出问题 |
-
-详细设计文档见 `docs/plans/` 目录。
 
 ## License
 

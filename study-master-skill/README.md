@@ -140,13 +140,6 @@ my-project/
 4. 关键算法剖析
 5. 设计决策分析
 
-## 设计文档
-
-详细的设计和实现文档位于：
-
-- 设计文档：`docs/plans/2026-03-12-study-master-skill-design.md`
-- 实现计划：`docs/plans/2026-03-12-study-master-implementation.md`
-
 ## License
 
 MIT
