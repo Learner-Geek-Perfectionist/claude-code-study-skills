@@ -115,7 +115,11 @@ my-project/
 ```
 
 安装内容：
-- Skill 文件：`~/.claude/skills/study-master.md`
+- Skill 文件：`~/.claude/skills/study-master/`
+  - SKILL.md（核心工作流）
+  - format-rules.md（格式规范）
+  - analysis-guide.md（源码分析方法）
+  - document-templates.md（文档模板）
 - 格式验证 hooks：`~/.claude/hooks/`
 
 安装后即可使用 `/study-master` 命令。

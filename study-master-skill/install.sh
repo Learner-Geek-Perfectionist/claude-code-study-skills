@@ -16,11 +16,28 @@ SKILL_NAME=$(grep '^name:' "$SCRIPT_DIR/SKILL.md" | head -1 | sed 's/name: *//')
 echo "📦 Installing $SKILL_NAME skill..."
 echo ""
 
-# 1. Install skill file
-echo "📝 Installing skill file..."
+# 1. Install skill directory (includes SKILL.md and supporting files)
+echo "📝 Installing skill directory..."
 mkdir -p "$SKILLS_DIR"
-cp "$SCRIPT_DIR/SKILL.md" "$SKILLS_DIR/${SKILL_NAME}.md"
-echo "✅ Installed: $SKILLS_DIR/${SKILL_NAME}.md"
+TARGET_DIR="$SKILLS_DIR/$SKILL_NAME"
+
+# Remove old installation if exists
+[ -d "$TARGET_DIR" ] && rm -rf "$TARGET_DIR"
+[ -f "$SKILLS_DIR/${SKILL_NAME}.md" ] && rm "$SKILLS_DIR/${SKILL_NAME}.md"
+
+# Copy entire skill directory
+mkdir -p "$TARGET_DIR"
+cp "$SCRIPT_DIR/SKILL.md" "$TARGET_DIR/"
+cp "$SCRIPT_DIR/format-rules.md" "$TARGET_DIR/"
+cp "$SCRIPT_DIR/analysis-guide.md" "$TARGET_DIR/"
+cp "$SCRIPT_DIR/document-templates.md" "$TARGET_DIR/"
+[ -f "$SCRIPT_DIR/README.md" ] && cp "$SCRIPT_DIR/README.md" "$TARGET_DIR/"
+
+echo "✅ Installed: $TARGET_DIR/"
+echo "   • SKILL.md"
+echo "   • format-rules.md"
+echo "   • analysis-guide.md"
+echo "   • document-templates.md"
 echo ""
 
 # 2. Install hooks (copy all files directly)
@@ -95,13 +112,17 @@ fi
 echo "🎉 Installation complete!"
 echo ""
 echo "Installed components:"
-echo "  • Skill: $SKILLS_DIR/${SKILL_NAME}.md"
-[ -d "$SCRIPT_DIR/hooks" ] && echo "  • Hooks: $HOOKS_DIR/${SKILL_NAME}-*"
+echo "  • Skill directory: $TARGET_DIR/"
+echo "    - SKILL.md"
+echo "    - format-rules.md"
+echo "    - analysis-guide.md"
+echo "    - document-templates.md"
+[ -d "$SCRIPT_DIR/hooks" ] && echo "  • Hooks: $HOOKS_DIR/"
 echo ""
-echo "📖 Recommended project structure:"
+echo "📖 Required project structure:"
 echo "  project-root/"
-echo "  ├── src/          # Source code"
-echo "  ├── docs/         # Documentation"
+echo "  ├── src/          # Source code (required)"
+echo "  ├── docs/         # Documentation (required)"
 echo "  └── study/        # Generated study docs (auto-created)"
 echo ""
 echo "Usage: /${SKILL_NAME} <topic>"
