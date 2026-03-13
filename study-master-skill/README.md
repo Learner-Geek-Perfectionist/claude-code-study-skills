@@ -43,12 +43,6 @@ skill 会自动在以下位置查找源码：
 3. `docs/<topic>/` - 协议文档
 4. `./<topic>/` - 根目录
 
-### 手动指定源码路径
-
-```bash
-/study-master <topic> --source <path>
-```
-
 ## 示例
 
 ### 示例 1：使用推荐目录结构
@@ -71,15 +65,7 @@ my-project/
 
 生成的文档位于：`study/redis/`
 
-### 示例 2：手动指定路径
-
-学习外部项目：
-
-```bash
-/study-master redis --source /path/to/redis
-```
-
-### 示例 3：学习协议规范
+### 示例 2：学习协议规范
 
 ```
 my-project/

@@ -51,11 +51,9 @@ cd study-master-skill
 ### 使用
 
 ```bash
-# 自动查找源码
 /study-master redis
 
-# 手动指定源码路径
-/study-master tcp-ip --source /path/to/tcp-specs
+/study-master tcp-ip
 ```
 
 ### 推荐项目结构
