@@ -65,3 +65,24 @@ LSP 不可用时的标注格式：
 | 时序交互 | `sequenceDiagram` | 多模块协作、执行路径追踪 |
 | 状态转换 | `stateDiagram-v2` | 对象生命周期、协议状态机 |
 | 数据结构 | `classDiagram` | 结构体成员、类层次 |
+
+## 6. 序列化分析结果
+
+阶段 4 完成大纲后，必须将分析结果写入 `study/<topic>/.analysis-context.md`，供 subagent 读取。
+
+### 序列化步骤
+
+1. **收集项目概况**：项目名称、类型、源码根路径、LSP 状态
+2. **构建路径映射表**：每个模块对应的源码文件路径列表
+3. **提取模块摘要**：每个模块的核心函数（函数名、文件:行号、一句话职责）、关键数据结构、模块间依赖
+4. **写入文件**：使用 Write 工具生成 `.analysis-context.md`
+
+### 控制体积原则
+
+- 每个模块摘要 ≤ 30 行
+- **只存指针不存原文**：记录文件路径+行号，不复制源码内容
+- 格式规范只写关键摘要，指向完整文件让 subagent 自行 Read
+
+### .analysis-context.md 模板
+
+见 [document-templates.md](document-templates.md) 第 6 节。
