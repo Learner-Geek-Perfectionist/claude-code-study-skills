@@ -48,15 +48,15 @@ settings_file = os.path.expanduser("~/.claude/settings/settings.json")
 with open(settings_file, 'r') as f:
     settings = json.load(f)
 
-# Remove profiling hook entry
+# Remove all profiling hook entries (study-master-profiling-*)
 if 'hooks' in settings:
     original_count = len(settings['hooks'])
-    settings['hooks'] = [h for h in settings['hooks'] if h.get('name') != 'study-master-profiling']
+    settings['hooks'] = [h for h in settings['hooks'] if not h.get('name', '').startswith('study-master-profiling')]
     removed = original_count - len(settings['hooks'])
     if removed > 0:
-        print(f"✅ Removed hook: study-master-profiling ({removed} entry)")
+        print(f"✅ Removed {removed} profiling hook(s)")
     else:
-        print("⚠️  Hook study-master-profiling not found in settings")
+        print("⚠️  No profiling hooks found in settings")
 
     # Clean up empty hooks array
     if len(settings['hooks']) == 0:

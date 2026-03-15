@@ -77,20 +77,22 @@ with open(settings_file, 'r') as f:
 if 'hooks' not in settings:
     settings['hooks'] = []
 
-# Profiling hook configuration (no tool filter - fires on ALL tools)
-hook_config = {
-    "name": "study-master-profiling",
-    "event": "PostToolUse",
-    "command": f"{hooks_dir}/profiling_hook.sh"
-}
-
-existing = next((h for h in settings['hooks'] if h.get('name') == hook_config['name']), None)
-if existing:
-    existing.update(hook_config)
-    print("✅ Updated hook: study-master-profiling")
-else:
-    settings['hooks'].append(hook_config)
-    print("✅ Added hook: study-master-profiling")
+# Profiling hook: one entry per tool type (tool field is required for PostToolUse)
+profiling_tools = ["Read", "Write", "Edit", "Bash", "Agent", "Glob", "Grep", "LSP"]
+for tool in profiling_tools:
+    hook_name = f"study-master-profiling-{tool.lower()}"
+    hook_config = {
+        "name": hook_name,
+        "event": "PostToolUse",
+        "tool": tool,
+        "command": f"{hooks_dir}/profiling_hook.sh"
+    }
+    existing = next((h for h in settings['hooks'] if h.get('name') == hook_name), None)
+    if existing:
+        existing.update(hook_config)
+    else:
+        settings['hooks'].append(hook_config)
+print(f"✅ Registered profiling hooks for {len(profiling_tools)} tool types")
 
 # Write back
 with open(settings_file, 'w') as f:
