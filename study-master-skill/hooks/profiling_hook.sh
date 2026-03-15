@@ -2,7 +2,8 @@
 # PostToolUse hook: 记录所有工具调用到 profiling 日志
 # 写入固定位置 /tmp/study-master-tool.log，避免 hook 需要知道 study/<topic> 路径
 
-set -euo pipefail
+# NOTE: no "set -euo pipefail" — this is a non-blocking logging hook
+# and must always exit 0, even if python3 parsing fails.
 
 LOG_FILE="/tmp/study-master-tool.log"
 
@@ -20,7 +21,7 @@ import sys, json
 data = json.load(sys.stdin)
 inp = data.get('tool_input', {})
 # 不同工具的路径字段不同
-path = inp.get('file_path', '') or inp.get('path', '') or inp.get('command', '[:30]')
+path = inp.get('file_path', '') or inp.get('path', '') or inp.get('command', '')
 print(str(path)[:200])
 ")
 
