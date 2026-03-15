@@ -381,7 +381,7 @@ class ProfilingAnalyzer:
 
         # 写入报告到与 phase_log 同目录
         report_dir = os.path.dirname(os.path.abspath(phase_log))
-        report_path = os.path.join(report_dir, "profiling-report.md")
+        report_path = os.path.join(report_dir, ".profiling-report.md")
 
         with open(report_path, "w") as f:
             f.write(report)

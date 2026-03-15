@@ -166,9 +166,9 @@ def run_tests():
             print(errors[-1])
 
         # ------------------------------------------------------------------
-        # Test 5: 工具调用统计 — Read 应为 10 次，重复读取被检测
+        # Test 5: 工具调用统计 — Read 应为 12 次，重复读取被检测
         # ------------------------------------------------------------------
-        test_name = "工具调用统计 (Read=10, 检测重复读取)"
+        test_name = "工具调用统计 (Read=12, 检测重复读取)"
         has_read_count = "Read" in report
         has_duplicate = "重复" in report or "duplicate" in report.lower()
         if has_read_count and has_duplicate:
