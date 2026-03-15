@@ -1,0 +1,337 @@
+---
+name: study-master
+description: 深入学习开源项目源码、协议规范和语言框架内部机制，生成教科书风格的学习文档
+---
+
+# Study-Master Skill（诊断模式）
+
+> ⏱️ **[诊断模式已启用]** 本次运行将在各阶段边界自动记录时间戳到 `study/<topic>/.profiling.log`。这不会影响文档生成质量。请确保在创建 `study/<topic>/` 目录后立即记录第一个检查点。
+
+## 概述
+
+帮助程序员深入学习开源项目源码、协议栈实现（如 TCP/IP、HTTP）、特定编程语言或框架的内部机制。生成深度解析型学习文档，采用教科书风格，文档规模根据主题复杂度动态调整。支持自动检测并使用 LSP 增强代码分析。
+
+## 强制目录结构
+
+- `src/` — 源码目录
+- `docs/` — 协议规范文档
+- `study/<topic>/` — 学习文档输出目录（自动创建）
+
+**规则**：至少 `src/` 或 `docs/` 之一必须存在。两者都不存在时拒绝执行并提示用户调整目录结构。
+
+## 教科书风格原则
+
+生成的文档必须遵循渐进式知识展开：
+
+1. **先整体后局部**：先展示模块在系统中的位置，再深入细节
+2. **先接口后实现**：先讲清楚"做什么"，再讲"怎么做"
+3. **先主流程后边界**：先追踪正常执行路径，再分析错误处理
+4. **先概念后代码**：先用自然语言解释设计思想，再展示代码
+
+## 工作流程
+
+### 阶段 0：源码定位与验证
+
+> ⏱️ **[诊断]** 阶段 0-2 开始，创建 `study/<topic>/` 目录后立即运行：
+> ```
+> Bash: echo "PHASE|stage-0-2|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+1. 检查 `src/` 或 `docs/` 目录是否存在
+2. 按优先级查找：`src/<topic>/` → `src/*<topic>*/` → `docs/<topic>/` → `docs/*<topic>*/` → `./<topic>/`（不区分大小写，支持部分匹配）
+3. 找到多个候选时列出让用户选择
+4. 输出目录：`study/<topic>/`
+
+### 阶段 1：LSP 环境检测
+
+C/C++ 项目自动检测 LSP 可用性，其他语言跳过。
+
+> 📖 详见 [analysis-guide.md](analysis-guide.md) 第 1 节
+
+### 阶段 2：主题识别与准备
+
+解析 `<topic>` 参数，判断类型（项目/协议/语言内部机制），确定源码位置，创建 `study/<topic>/`。
+
+> ⏱️ **[诊断]** 阶段 0-2 结束，运行：
+> ```
+> Bash: echo "PHASE|stage-0-2|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+### 阶段 3：全源码深度分析
+
+> ⏱️ **[诊断]** 阶段 3 开始，运行：
+> ```
+> Bash: echo "PHASE|stage-3-analysis|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+利用 1M 上下文窗口，执行全源码深度分析：
+
+1. **源码加载**：Read 项目所有核心源文件到上下文中（1M 上下文可加载约 30000 行代码）
+2. **结构分析**：根据 LSP 可用性选择分析方法，识别核心模块、热点函数和模块依赖关系
+3. **深度解读**：在拥有全部源码的上下文中完成以下分析：
+   - 每个模块的设计意图和职责边界
+   - 关键算法和核心函数的逻辑解读（不只是签名，要理解设计动机）
+   - 模块间的耦合关系和数据流
+   - 关键设计决策和 tradeoff 分析
+4. **热点函数深度分析**：对每个核心函数，阅读完整实现，理解内部逻辑、错误处理策略和与其他模块的交互方式
+
+> 📖 分析方法详见 [analysis-guide.md](analysis-guide.md) 第 2-4 节
+
+> ⏱️ **[诊断]** 阶段 3 结束，运行：
+> ```
+> Bash: echo "PHASE|stage-3-analysis|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+### 阶段 4：生成学习大纲与富分析报告
+
+> ⏱️ **[诊断]** 阶段 4 开始，运行：
+> ```
+> Bash: echo "PHASE|stage-4-serialize|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+基于阶段 3 的深度分析，确定章节划分和学习路径，明确列出所有需要生成的章节。
+
+将全部深度分析结论序列化为**富分析报告**，写入 `study/<topic>/.analysis-context.md`。报告包含：
+- 项目全局架构的深度解读
+- 每个模块的设计意图、关键代码片段与逐段解读、调用关系、设计决策
+- 模块间关系分析（跨模块数据流、耦合度）
+
+这份报告是 subagent 生成文档的核心输入——subagent 不再需要自己分析源码，而是直接使用报告中已完成的分析结论。
+
+**关键：计算 `source_path_prefix` 和交叉引用锚点映射**
+
+在生成 `.analysis-context.md` 之前，必须完成：
+
+1. **计算 `source_path_prefix`**：统计 `study/<topic>/` 相对于项目根的目录层数，每层一个 `../`。例如 `study/redis/` 为 2 层 → `../../`。将此值写入报告的 `source_path_prefix` 字段。所有源码路径必须加上此前缀。
+2. **预计算「交叉引用锚点映射」表**：根据 [document-templates.md](document-templates.md) 第 2 节定义的**标题编号规范**（数据结构节固定为 `## 2.` → `### 2.N`，函数节固定为 `## 3.` → `### 3.N`），为每个可能被其他章节引用的术语（结构体名、关键函数名）生成 GFM 锚点映射。锚点必须严格基于二级编号（如 `#21-struct-xxx`），禁止假设三级编号。写入报告供 subagent 查表使用。
+
+> 📖 富分析报告模板详见 [document-templates.md](document-templates.md) 第 6 节
+> 📖 序列化指南详见 [analysis-guide.md](analysis-guide.md) 第 6 节
+
+> ⏱️ **[诊断]** 阶段 4 结束，运行：
+> ```
+> Bash: echo "PHASE|stage-4-serialize|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+### 阶段 5：委派生成快速导览
+
+> ⏱️ **[诊断]** 阶段 5 开始，运行：
+> ```
+> Bash: echo "PHASE|stage-5-overview|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+使用 Agent 工具委派一个 subagent 生成 `00-overview.md`。此章节必须先于模块章节完成（后续章节可能引用）。
+
+> ⏱️ **[诊断]** 委派 overview subagent 前，运行：
+> ```
+> Bash: echo "AGENT|overview|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+**Subagent prompt 构造：**
+
+> 你是 study-master 文档生成器。你的任务是将已完成的深度分析转化为「{topic}」的快速导览章节。
+>
+> 准备步骤：
+> 1. Read {study_path}/.analysis-context.md — 获取完整的深度分析报告
+> 2. Read {skill_path}/format-rules.md — 获取完整格式规范
+> 3. 从分析报告中获取 `source_path_prefix` 字段值——所有源码链接必须使用此前缀，禁止自行计算 `../` 层数
+> 4. 从分析报告中获取「交叉引用锚点映射」表——所有交叉引用链接必须包含锚点，从此表查找
+>
+> 分析报告中已包含项目全局架构分析和所有模块的深度解读，直接使用这些分析结论。
+>
+> 生成要求：
+> - 包含：项目简介、核心概念速览、典型场景剖析（含完整执行路径追踪）、架构全景图、学习路线图
+> - 遵循教科书风格原则：先整体后局部、先接口后实现、先主流程后边界、先概念后代码
+> - 严格遵守 format-rules.md 的所有格式规范
+> - 源码链接路径前缀统一使用分析报告中的 `source_path_prefix`
+> - 交叉引用其他章节时，必须从「交叉引用锚点映射」表查找锚点，格式为 `[术语](./文件.md#锚点)`
+> - 使用 Write 工具一次性输出完整章节
+> - 生成完成后用 Read 验证无乱码和格式问题
+> - 输出到：{study_path}/00-overview.md
+
+> ⏱️ **[诊断]** overview subagent 返回后，运行：
+> ```
+> Bash: echo "AGENT|overview|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+等待 subagent 完成后再进入阶段 6-N。
+
+> 📖 快速导览模板详见 [document-templates.md](document-templates.md) 第 1 节
+> 📖 格式规范详见 [format-rules.md](format-rules.md)
+
+> ⏱️ **[诊断]** 阶段 5 结束，运行：
+> ```
+> Bash: echo "PHASE|stage-5-overview|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+### 阶段 6-N：并行委派模块章节生成
+
+> ⏱️ **[诊断]** 阶段 6-N 开始，运行：
+> ```
+> Bash: echo "PHASE|stage-6N-chapters|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+**必须生成所有计划的章节，不能遗漏。** 使用 Agent 工具为每个模块章节委派独立的 subagent，所有模块章节**并行生成**。
+
+> ⏱️ **[诊断]** 每个模块 subagent 委派前，运行：
+> ```
+> Bash: echo "AGENT|{章节文件名}|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+> 每个模块 subagent 返回后，运行：
+> ```
+> Bash: echo "AGENT|{章节文件名}|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+**对每个模块章节构造 subagent prompt：**
+
+> 你是 study-master 文档生成器。你的任务是将已完成的深度分析转化为「{topic}」第 {N} 章：{章节标题} 的教科书风格文档。
+>
+> 准备步骤：
+> 1. Read {study_path}/.analysis-context.md — 获取完整的深度分析报告
+> 2. Read {skill_path}/format-rules.md — 获取完整格式规范
+> 3. 从分析报告中获取 `source_path_prefix` 字段值——所有源码链接必须使用此前缀，禁止自行计算 `../` 层数
+> 4. 从分析报告中获取「交叉引用锚点映射」表——所有交叉引用链接必须包含锚点，从此表查找
+>
+> 你负责的章节：第 {N} 章 - {章节标题}
+> 在分析报告中找到「{模块名}」模块的完整分析内容，将其转化为教科书风格文档。
+>
+> 分析报告中已包含该模块的：
+> - 设计意图和职责边界
+> - 核心函数表和关键代码片段（含逐段解读）
+> - 调用关系和数据流
+> - 关键数据结构
+> - 设计决策与 tradeoff
+>
+> 直接使用这些分析结论，将其转化为教科书风格的章节。如需更多源码细节，可以 Read 源文件（路径已在分析报告中提供）。
+>
+> 生成要求：
+> - **标题编号规范（强制）**：顶层节用 `## N.`（如 `## 2. 核心数据结构`），子节用 `### N.M`（如 `### 2.1 struct xxx`）。禁止三级编号（如 `### 1.2.1`）。数据结构节固定为 `## 2.`，核心函数节固定为 `## 3.`。详见分析报告中的「交叉引用锚点映射」表——锚点基于此编号规范预计算
+> - 遵循教科书风格原则：先整体后局部、先接口后实现、先主流程后边界、先概念后代码
+> - 使用多层次代码展示：调用关系图（Mermaid）→ 伪代码 → 真实代码片段 → 实现细节
+> - 每个章节根据内容复杂度动态调整长度，确保完整覆盖所有核心函数、关键数据结构和典型使用场景
+> - 严格遵守 format-rules.md 的所有格式规范
+> - 源码链接路径前缀统一使用分析报告中的 `source_path_prefix`
+> - 交叉引用其他章节时，必须从「交叉引用锚点映射」表查找锚点，格式为 `[术语](./文件.md#锚点)`
+> - 使用 Write 工具一次性输出完整章节
+> - 生成完成后用 Read 验证无乱码和格式问题
+> - 输出到：{study_path}/{filename}.md
+
+**并行调度规则：**
+- 在一条消息中使用多个 Agent 工具调用，同时启动所有模块章节的 subagent
+- 每个 subagent 独立运行，互不依赖
+- 等待所有 subagent 完成后再进入质量审查阶段
+
+> 📖 模块章节模板详见 [document-templates.md](document-templates.md) 第 2 节
+> 📖 格式规范详见 [format-rules.md](format-rules.md)
+
+> ⏱️ **[诊断]** 阶段 6-N 结束（所有 subagent 已返回），运行：
+> ```
+> Bash: echo "PHASE|stage-6N-chapters|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+### 最后阶段：质量审查、交叉引用与收尾
+
+> ⏱️ **[诊断]** 最后阶段开始，运行：
+> ```
+> Bash: echo "PHASE|final|start|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+**进入条件**（全部满足）：所有 subagent 已完成、所有计划章节的文件已存在于 `study/<topic>/`。
+
+**步骤 1：跨章节格式验证与锚点校验**
+
+> ⏱️ **[诊断]** 步骤 1 开始：`Bash: echo "PHASE|final-step-1|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+逐文件 Read 检查每个 subagent 生成的章节：
+- 格式合规性（链接格式、Mermaid 图表、反引号规则、LaTeX 数学符号）
+- 无乱码（U+FFFD 等）
+- 源码引用路径正确
+- **锚点一致性验证**：提取每个章节中被交叉引用的标题（`## N.` 和 `### N.M` 格式），计算其 GFM 锚点，与 `.analysis-context.md` 中预计算的锚点映射表逐条对比。如果发现不匹配（subagent 未遵守编号规范），按以下优先级修正：
+  - (a) 优先修正标题编号：如 subagent 写了 `### 1.2.1 struct xxx`，直接 Edit 为 `### 2.1 struct xxx`（同时修正该文件内引用此标题的目录/链接）
+  - (b) 如果标题结构差异过大无法简单修正编号，则更新所有引用该锚点的其他章节中的链接，使其指向实际锚点
+- 发现其他问题时直接修正，不需要重新委派 subagent
+
+> ⏱️ **[诊断]** 步骤 1 结束：`Bash: echo "PHASE|final-step-1|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+**步骤 2：内容质量审查**
+
+> ⏱️ **[诊断]** 步骤 2 开始：`Bash: echo "PHASE|final-step-2|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+Read 所有章节到上下文中，审查：
+- 分析深度是否足够（是否浮于表面、遗漏了关键代码路径）
+- 逻辑是否清晰（概念展开是否渐进、有无跳跃）
+- 教科书风格是否一致（是否遵循先整体后局部等原则）
+
+> ⏱️ **[诊断]** 步骤 2 结束：`Bash: echo "PHASE|final-step-2|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+**步骤 3：交叉引用注入**
+
+> ⏱️ **[诊断]** 步骤 3 开始：`Bash: echo "PHASE|final-step-3|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+在各章节的适当位置添加前后引用，使文档读起来像一本连贯的教科书：
+- 前向引用："这里使用的 `结构体名` 将在[第 N 章：标题](NN-module.md)中深入解析"
+- 后向引用："该函数的调用者 `函数名` 已在[第 N 章：标题](NN-module.md#锚点)中讨论"
+- 概念引用："关于 XX 概念的详细解释，请参见[第 N 章](NN-module.md#锚点)"
+
+> ⏱️ **[诊断]** 步骤 3 结束：`Bash: echo "PHASE|final-step-3|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+**步骤 4：深度补充**
+
+> ⏱️ **[诊断]** 步骤 4 开始：`Bash: echo "PHASE|final-step-4|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+如果发现某个章节分析深度不足：
+- 用 Edit 工具直接补充缺失的设计决策分析
+- 补充未解读的关键代码路径
+- 补充跨模块交互的深层逻辑
+
+> ⏱️ **[诊断]** 步骤 4 结束：`Bash: echo "PHASE|final-step-4|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+**步骤 5：概览章节更新**
+
+> ⏱️ **[诊断]** 步骤 5 开始：`Bash: echo "PHASE|final-step-5|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+根据所有章节的实际内容，更新 `00-overview.md`：
+- 确保架构全景图与各章节内容一致
+- 确保学习路线图准确导航到各章节
+- 确保典型场景剖析引用了正确的章节
+
+> ⏱️ **[诊断]** 步骤 5 结束：`Bash: echo "PHASE|final-step-5|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+**步骤 6：整合**
+
+> ⏱️ **[诊断]** 步骤 6 开始：`Bash: echo "PHASE|final-step-6|start|$(date +%s)" >> study/<topic>/.profiling.log`
+
+执行：生成 `appendix-references.md`、创建 `.study-meta.json`、更新 README.md、输出最终报告。
+
+> ⏱️ **[诊断]** 步骤 6 结束：`Bash: echo "PHASE|final-step-6|end|$(date +%s)" >> study/<topic>/.profiling.log`
+
+> ⏱️ **[诊断]** 最后阶段结束，运行：
+> ```
+> Bash: echo "PHASE|final|end|$(date +%s)" >> study/<topic>/.profiling.log
+> ```
+
+> ⏱️ **[诊断]** 全部完成！生成诊断报告：
+> ```
+> Bash: python3 ~/.claude/hooks/generate_profiling_report.py study/<topic>/.profiling.log /tmp/study-master-tool.log
+> ```
+
+> 📖 详见 [document-templates.md](document-templates.md) 第 5 节
+
+## 文档结构概要
+
+| 文件 | 内容 |
+|------|------|
+| `.analysis-context.md` | 富分析报告：项目全局架构分析、模块深度解读（含代码片段与解读）、设计决策、模块间关系（阶段 4 生成，供 subagent 读取） |
+| `00-overview.md` | 快速导览：项目简介、核心概念、典型场景、架构图、学习路线 |
+| `01-module-xxx.md` | 模块深度解析：概述、代码展示、数据结构、算法、设计决策、检查点 |
+| `appendix-references.md` | 参考资料索引 |
+| `.study-meta.json` | 元数据：主题、路径、LSP 状态、章节列表 |
+
+## 质量控制
+
+- 每个章节根据复杂度动态调整长度，确保内容完整
+- 生成后逐文件用 Read 检查乱码，发现 U+FFFD 或格式问题立即修正
+- 所有源码引用必须有正确的超链接，验证 LSP 数据准确性
+
+> 📖 格式标准详见 [format-rules.md](format-rules.md)，PostToolUse hook 自动验证格式合规
+> 📖 输出规则详见 [document-templates.md](document-templates.md) 第 3 节
