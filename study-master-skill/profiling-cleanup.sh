@@ -35,36 +35,35 @@ rm -f "$HOOKS_DIR/generate_profiling_report.py"
 echo "✅ Removed: generate_profiling_report.py"
 echo ""
 
-# 3. Unregister hook from settings.json
+# 3. Unregister hook from ~/.claude/settings.json (correct location)
 echo "📝 Unregistering profiling hook from settings.json..."
-if [ -f "$SETTINGS_FILE" ]; then
+REAL_SETTINGS="$CLAUDE_DIR/settings.json"
+
+if [ -f "$REAL_SETTINGS" ]; then
     python3 << 'PYTHON_SCRIPT'
 import json
 import os
 
-settings_file = os.path.expanduser("~/.claude/settings/settings.json")
+settings_file = os.path.expanduser("~/.claude/settings.json")
 
-# Read existing settings
 with open(settings_file, 'r') as f:
     settings = json.load(f)
 
-# Remove all profiling hook entries (study-master-profiling-*)
-if 'hooks' in settings:
-    original_count = len(settings['hooks'])
-    settings['hooks'] = [h for h in settings['hooks'] if not h.get('name', '').startswith('study-master-profiling')]
-    removed = original_count - len(settings['hooks'])
-    if removed > 0:
-        print(f"✅ Removed {removed} profiling hook(s)")
-    else:
-        print("⚠️  No profiling hooks found in settings")
+# Remove profiling hook from nested format: hooks.PostToolUse[]
+removed = 0
+if 'hooks' in settings and 'PostToolUse' in settings['hooks']:
+    original = settings['hooks']['PostToolUse']
+    settings['hooks']['PostToolUse'] = [
+        entry for entry in original
+        if not any('profiling_hook' in h.get('command', '') for h in entry.get('hooks', []))
+    ]
+    removed = len(original) - len(settings['hooks']['PostToolUse'])
 
-    # Clean up empty hooks array
-    if len(settings['hooks']) == 0:
-        del settings['hooks']
+if removed > 0:
+    print(f"✅ Removed {removed} profiling hook(s)")
 else:
-    print("⚠️  No hooks array in settings.json")
+    print("⚠️  No profiling hooks found in settings")
 
-# Write back
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
 PYTHON_SCRIPT

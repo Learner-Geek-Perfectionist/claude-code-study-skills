@@ -54,47 +54,59 @@ cp "$SCRIPT_DIR/hooks/generate_profiling_report.py" "$HOOKS_DIR/generate_profili
 echo "✅ Installed: generate_profiling_report.py"
 echo ""
 
-# 4. Register profiling hook in settings.json
+# 4. Register profiling hook in ~/.claude/settings.json (correct location, nested format)
 echo "📝 Registering profiling hook in settings.json..."
-mkdir -p "$SETTINGS_DIR"
 
-# Initialize settings.json if not exists
-[ ! -f "$SETTINGS_FILE" ] && echo '{}' > "$SETTINGS_FILE"
+# Claude Code reads ~/.claude/settings.json (NOT ~/.claude/settings/settings.json)
+REAL_SETTINGS="$CLAUDE_DIR/settings.json"
 
-# Use Python to safely merge hook configuration
+if [ ! -f "$REAL_SETTINGS" ]; then
+    echo '{}' > "$REAL_SETTINGS"
+fi
+
 python3 << 'PYTHON_SCRIPT'
 import json
 import os
 
-settings_file = os.path.expanduser("~/.claude/settings/settings.json")
+settings_file = os.path.expanduser("~/.claude/settings.json")
 hooks_dir = os.path.expanduser("~/.claude/hooks")
 
-# Read existing settings
 with open(settings_file, 'r') as f:
     settings = json.load(f)
 
-# Ensure hooks array exists
+# Claude Code uses nested hook format: hooks.PostToolUse[{matcher, hooks[{type, command}]}]
 if 'hooks' not in settings:
-    settings['hooks'] = []
+    settings['hooks'] = {}
+if 'PostToolUse' not in settings['hooks']:
+    settings['hooks']['PostToolUse'] = []
 
-# Profiling hook: one entry per tool type (tool field is required for PostToolUse)
-profiling_tools = ["Read", "Write", "Edit", "Bash", "Agent", "Glob", "Grep", "LSP"]
-for tool in profiling_tools:
-    hook_name = f"study-master-profiling-{tool.lower()}"
-    hook_config = {
-        "name": hook_name,
-        "event": "PostToolUse",
-        "tool": tool,
-        "command": f"{hooks_dir}/profiling_hook.sh"
-    }
-    existing = next((h for h in settings['hooks'] if h.get('name') == hook_name), None)
-    if existing:
-        existing.update(hook_config)
-    else:
-        settings['hooks'].append(hook_config)
-print(f"✅ Registered profiling hooks for {len(profiling_tools)} tool types")
+# Check if profiling hook already exists
+profiling_entry = None
+for entry in settings['hooks']['PostToolUse']:
+    for h in entry.get('hooks', []):
+        if 'profiling_hook' in h.get('command', ''):
+            profiling_entry = entry
+            break
 
-# Write back
+if profiling_entry:
+    print("✅ Profiling hook already registered, updating...")
+    profiling_entry['matcher'] = ''
+    profiling_entry['hooks'] = [{
+        "type": "command",
+        "command": f'bash "{hooks_dir}/profiling_hook.sh"',
+        "timeout": 5
+    }]
+else:
+    settings['hooks']['PostToolUse'].append({
+        "matcher": "",
+        "hooks": [{
+            "type": "command",
+            "command": f'bash "{hooks_dir}/profiling_hook.sh"',
+            "timeout": 5
+        }]
+    })
+    print("✅ Added profiling hook (matcher: all tools)")
+
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
 PYTHON_SCRIPT
