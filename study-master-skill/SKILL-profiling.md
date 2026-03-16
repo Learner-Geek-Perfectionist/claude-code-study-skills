@@ -101,7 +101,7 @@ C/C++ 项目自动检测 LSP 可用性，其他语言跳过。
 
 ```
 串行阶段：00-overview.md → 01-xxx.md → 02-xxx.md（主对话直接生成，建立风格基线）
-并行阶段：03-xxx.md ~ NN-xxx.md（Agent 工具并行生成，源文件直读）
+并行阶段：03-xxx.md ~ NN-xxx.md（Agent 工具并行生成，嵌入分析摘要+代码片段）
 收尾：appendix-references.md（主对话生成）
 ```
 
