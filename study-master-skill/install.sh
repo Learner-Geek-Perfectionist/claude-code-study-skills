@@ -29,15 +29,11 @@ TARGET_DIR="$SKILLS_DIR/$SKILL_NAME"
 mkdir -p "$TARGET_DIR"
 cp "$SCRIPT_DIR/SKILL.md" "$TARGET_DIR/"
 cp "$SCRIPT_DIR/format-rules.md" "$TARGET_DIR/"
-cp "$SCRIPT_DIR/analysis-guide.md" "$TARGET_DIR/"
-cp "$SCRIPT_DIR/document-templates.md" "$TARGET_DIR/"
 [ -f "$SCRIPT_DIR/README.md" ] && cp "$SCRIPT_DIR/README.md" "$TARGET_DIR/"
 
 echo "✅ Installed: $TARGET_DIR/"
 echo "   • SKILL.md"
 echo "   • format-rules.md"
-echo "   • analysis-guide.md"
-echo "   • document-templates.md"
 echo ""
 
 # 2. Install hooks (copy all files directly)
@@ -80,25 +76,30 @@ with open(settings_file, 'r') as f:
 if 'hooks' not in settings:
     settings['hooks'] = []
 
-# Hook configuration
-hook_config = {
-    "name": "study-master-validator",
-    "event": "PostToolUse",
-    "tool": "Write",
-    "command": f"{hooks_dir}/check-study_master.sh"
-}
+# Hook configurations (validate on both Write and Edit)
+hook_configs = [
+    {
+        "name": "study-master-validator",
+        "event": "PostToolUse",
+        "tool": "Write",
+        "command": f"{hooks_dir}/check-study_master.sh"
+    },
+    {
+        "name": "study-master-validator-edit",
+        "event": "PostToolUse",
+        "tool": "Edit",
+        "command": f"{hooks_dir}/check-study_master.sh"
+    }
+]
 
-# Check if hook already exists
-existing = next((h for h in settings['hooks'] if h.get('name') == 'study-master-validator'), None)
-
-if existing:
-    # Update existing hook
-    existing.update(hook_config)
-    print("✅ Updated existing hook configuration")
-else:
-    # Add new hook
-    settings['hooks'].append(hook_config)
-    print("✅ Added new hook configuration")
+for hook_config in hook_configs:
+    existing = next((h for h in settings['hooks'] if h.get('name') == hook_config['name']), None)
+    if existing:
+        existing.update(hook_config)
+        print(f"✅ Updated hook: {hook_config['name']}")
+    else:
+        settings['hooks'].append(hook_config)
+        print(f"✅ Added hook: {hook_config['name']}")
 
 # Write back
 with open(settings_file, 'w') as f:
@@ -115,8 +116,6 @@ echo "Installed components:"
 echo "  • Skill directory: $TARGET_DIR/"
 echo "    - SKILL.md"
 echo "    - format-rules.md"
-echo "    - analysis-guide.md"
-echo "    - document-templates.md"
 [ -d "$SCRIPT_DIR/hooks" ] && echo "  • Hooks: $HOOKS_DIR/"
 echo ""
 echo "📖 Required project structure:"
