@@ -107,7 +107,7 @@ C/C++ 项目自动检测 LSP 可用性，其他语言跳过。
 
 #### 2.1 串行生成：Overview + 前 2 个模块章节
 
-主对话直接使用 Write 工具依次生成以下章节：
+主对话直接使用 Write 工具依次生成：`00-overview.md` → `01-xxx.md` → `02-xxx.md`。
 
 > ⏱️ **[诊断]** 每个串行章节生成前，运行：
 > ```
@@ -118,30 +118,11 @@ C/C++ 项目自动检测 LSP 可用性，其他语言跳过。
 > Bash: echo "PHASE|generate-{章节文件名}|end|$(date +%s)" >> study/<topic>/.profiling.log
 > ```
 
-1. **`00-overview.md`**（快速导览）
-2. **`01-xxx.md`**（第 1 个模块章节）
-3. **`02-xxx.md`**（第 2 个模块章节）
+串行生成的目的：建立写作风格基线和交叉引用模式，验证 `source_path_prefix` 和锚点映射的正确性，为后续并行章节提供一致性参照。
 
-串行生成的目的：
-- 在上下文中建立**写作风格基线**和**交叉引用模式**
-- 验证 `source_path_prefix` 和锚点映射的正确性
-- 为后续并行生成的章节提供一致性参照
-
-Overview 生成要求：
-- 包含：项目简介、核心概念速览、典型场景剖析（含完整执行路径追踪）、架构全景图、学习路线图
-
-模块章节生成要求：
-- 遵循教科书风格原则：先整体后局部、先接口后实现、先主流程后边界、先概念后代码
-- 使用多层次代码展示：调用关系图（Mermaid）→ 伪代码 → 真实代码片段 → 实现细节
-- 每个章节根据内容复杂度动态调整长度
-- 严格遵守 [format-rules.md](format-rules.md) 的所有格式规范
-- 源码链接路径前缀统一使用 `source_path_prefix`
-- 交叉引用其他章节时，从锚点映射表查找锚点，格式为 `[术语](./文件.md#锚点)`
-- 前向引用："这里使用的 `结构体名` 将在[第 N 章：标题](NN-module.md#锚点)中深入解析"
-- 后向引用："该函数的调用者 `函数名` 已在[第 N 章：标题](NN-module.md#锚点)中讨论"
-
-> 📖 快速导览模板详见 [document-templates.md](document-templates.md) 第 1 节
+> 📖 Overview 模板详见 [document-templates.md](document-templates.md) 第 1 节
 > 📖 模块章节模板详见 [document-templates.md](document-templates.md) 第 2 节
+> 📖 格式规范详见 [format-rules.md](format-rules.md)
 
 #### 2.2 并行生成：剩余模块章节
 
