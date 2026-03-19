@@ -6,8 +6,7 @@ set -euo pipefail
 CLAUDE_DIR="$HOME/.claude"
 SKILLS_DIR="$CLAUDE_DIR/skills"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
-SETTINGS_DIR="$CLAUDE_DIR/settings"
-SETTINGS_FILE="$SETTINGS_DIR/settings.json"
+SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Skill name (extracted from SKILL.md frontmatter)
@@ -49,10 +48,10 @@ if [ -d "$SCRIPT_DIR/hooks" ]; then
     echo ""
 fi
 
-# 3. Register hooks in settings.json
+# 3. Register hooks in ~/.claude/settings.json
+#    Claude Code hooks 格式: hooks.PostToolUse = [{matcher, hooks: [{type, command, timeout}]}]
 if [ -f "$HOOKS_DIR/check-study_master.sh" ]; then
     echo "📝 Registering hooks in settings.json..."
-    mkdir -p "$SETTINGS_DIR"
 
     # Initialize settings.json if not exists
     [ ! -f "$SETTINGS_FILE" ] && echo '{}' > "$SETTINGS_FILE"
@@ -60,48 +59,38 @@ if [ -f "$HOOKS_DIR/check-study_master.sh" ]; then
     # Use Python to safely merge hook configuration
     python3 << 'PYTHON_SCRIPT'
 import json
-import sys
 import os
 
-settings_file = os.path.expanduser("~/.claude/settings/settings.json")
-hooks_dir = os.path.expanduser("~/.claude/hooks")
+settings_file = os.path.expanduser("~/.claude/settings.json")
+hook_cmd = 'bash "$HOME/.claude/hooks/check-study_master.sh"'
 
-# Read existing settings
 with open(settings_file, 'r') as f:
     settings = json.load(f)
 
-# Ensure hooks array exists
-if 'hooks' not in settings:
-    settings['hooks'] = []
+# Ensure hooks.PostToolUse structure exists
+hooks = settings.setdefault('hooks', {})
+post_tool_use = hooks.setdefault('PostToolUse', [])
 
-# Hook configurations (validate on both Write and Edit)
-hook_configs = [
-    {
-        "name": "study-master-validator",
-        "event": "PostToolUse",
-        "tool": "Write",
-        "command": f"{hooks_dir}/check-study_master.sh"
-    },
-    {
-        "name": "study-master-validator-edit",
-        "event": "PostToolUse",
-        "tool": "Edit",
-        "command": f"{hooks_dir}/check-study_master.sh"
-    }
-]
+hook_entry = {"type": "command", "command": hook_cmd, "timeout": 10}
 
-for hook_config in hook_configs:
-    existing = next((h for h in settings['hooks'] if h.get('name') == hook_config['name']), None)
-    if existing:
-        existing.update(hook_config)
-        print(f"✅ Updated hook: {hook_config['name']}")
+for tool in ["Write", "Edit"]:
+    # Find existing matcher for this tool
+    matcher = next((m for m in post_tool_use if m.get('matcher') == tool), None)
+
+    if matcher is None:
+        # Create new matcher
+        post_tool_use.append({"matcher": tool, "hooks": [hook_entry]})
+        print(f"✅ Added hook: PostToolUse/{tool}")
+    elif not any(h.get('command') == hook_cmd for h in matcher.get('hooks', [])):
+        # Append hook to existing matcher
+        matcher.setdefault('hooks', []).append(hook_entry)
+        print(f"✅ Added hook: PostToolUse/{tool}")
     else:
-        settings['hooks'].append(hook_config)
-        print(f"✅ Added hook: {hook_config['name']}")
+        print(f"⏭️  Hook already exists: PostToolUse/{tool}")
 
-# Write back
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
+    f.write('\n')
 PYTHON_SCRIPT
 
     echo ""
