@@ -87,9 +87,7 @@ study-master-skill/
 ├── install.sh                        # 一键安装脚本
 ├── hooks/
 │   ├── check-study_master.sh         # PostToolUse Hook 入口
-│   ├── validate_study_master.py      # 格式校验器
-│   ├── profiling_hook.sh             # 工具调用日志记录
-│   └── generate_profiling_report.py  # 性能分析报告生成
+│   └── validate_study_master.py      # 格式校验器
 └── docs/plans/                       # 设计文档与迭代计划
 ```
 
