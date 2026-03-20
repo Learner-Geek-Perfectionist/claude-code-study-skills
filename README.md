@@ -85,10 +85,9 @@ Phase 3: 收尾
 study-master-skill/
 ├── SKILL.md                          # Skill 定义（核心）
 ├── install.sh                        # 一键安装脚本
-├── hooks/
-│   ├── check-study_master.sh         # PostToolUse Hook 入口
-│   └── validate_study_master.py      # 格式校验器
-└── docs/plans/                       # 设计文档与迭代计划
+└── hooks/
+    ├── check-study_master.sh         # PostToolUse Hook 入口
+    └── validate_study_master.py      # 格式校验器
 ```
 
 ### 格式校验器
