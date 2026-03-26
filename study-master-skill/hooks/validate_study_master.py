@@ -2,6 +2,7 @@
 """study-master 格式验证脚本"""
 import sys
 import re
+import unicodedata
 from pathlib import Path
 from typing import List, Iterator, Tuple
 
@@ -46,6 +47,7 @@ class FormatValidator:
     def validate(self) -> bool:
         self.check_replacement_chars()
         self.check_unicode_math()
+        self.check_cjk_emphasis_flanking()
         self.check_ascii_art()
         self.check_code_block_languages()
         self.check_source_location_format()
@@ -97,6 +99,57 @@ class FormatValidator:
             for char, latex in math_chars.items():
                 if char in line:
                     self.errors.append(ValidationError(i, 'math-symbol', f"Unicode 数学符号 '{char}' 应替换为 {latex}"))
+
+    @staticmethod
+    def _is_unicode_punct(ch: str) -> bool:
+        """CommonMark 定义的 Unicode 标点"""
+        return unicodedata.category(ch).startswith('P') or unicodedata.category(ch) in ('Sc', 'Sk', 'Sm', 'So')
+
+    def check_cjk_emphasis_flanking(self):
+        """检查 **...**  在 CJK 文本中因 CommonMark flanking 规则导致的渲染失败。
+
+        失败条件（CommonMark spec）：
+        - 闭合 ** 前是标点且后是非空白非标点（如 ）**的）→ 不满足 right-flanking
+        - 开启 ** 后是标点且前是非空白非标点（如 字**（）→ 不满足 left-flanking
+        """
+        for i, line in self._iter_content_lines():
+            # 找出所有 ** 位置
+            positions = []
+            j = 0
+            while j < len(line):
+                if j + 1 < len(line) and line[j] == '*' and line[j + 1] == '*':
+                    before_star = (j > 0 and line[j - 1] == '*')
+                    after_star = (j + 2 < len(line) and line[j + 2] == '*')
+                    if not before_star and not after_star:
+                        positions.append(j)
+                        j += 2
+                        continue
+                j += 1
+
+            # 配对：positions[0]=open, positions[1]=close, ...
+            for pair_idx in range(0, len(positions) - 1, 2):
+                open_pos = positions[pair_idx]
+                close_pos = positions[pair_idx + 1]
+
+                # 检查开启 **（left-flanking）
+                ch_before = line[open_pos - 1] if open_pos > 0 else None
+                ch_after = line[open_pos + 2] if open_pos + 2 < len(line) else None
+                if ch_after and not ch_after.isspace() and self._is_unicode_punct(ch_after):
+                    if ch_before and not ch_before.isspace() and not self._is_unicode_punct(ch_before):
+                        ctx = line[max(0, open_pos - 3):open_pos + 5]
+                        self.errors.append(ValidationError(
+                            i, 'cjk-emphasis',
+                            f"开启 ** 不满足 left-flanking（前非标点 + 后标点）：...{ctx}... → 在 ** 两侧加空格"))
+
+                # 检查闭合 **（right-flanking）
+                ch_before = line[close_pos - 1] if close_pos > 0 else None
+                ch_after = line[close_pos + 2] if close_pos + 2 < len(line) else None
+                if ch_before and not ch_before.isspace() and self._is_unicode_punct(ch_before):
+                    if ch_after and not ch_after.isspace() and not self._is_unicode_punct(ch_after):
+                        ctx = line[max(0, close_pos - 3):close_pos + 5]
+                        self.errors.append(ValidationError(
+                            i, 'cjk-emphasis',
+                            f"闭合 ** 不满足 right-flanking（前标点 + 后非标点）：...{ctx}... → 在 ** 两侧加空格"))
 
     def check_ascii_art(self):
         """检查 ASCII art（包括 ASCII 和 Unicode box-drawing）"""
