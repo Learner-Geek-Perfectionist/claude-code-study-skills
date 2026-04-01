@@ -1,13 +1,13 @@
 # Study-Master Skill
 
-一个 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 自定义 Skill，帮助程序员深入学习开源项目源码、协议规范和语言框架内部机制。自动生成**教科书风格**的学习文档，充分利用 Claude 的 1M 上下文窗口进行全源码深度分析。
+一个面向 Claude Code 和 Codex 的 `study-master` Skill，帮助程序员深入学习开源项目源码、协议规范和语言框架内部机制。自动生成**教科书风格**的学习文档，并根据当前 CLI 和模型的实际能力自适应选择文件分析、LSP 和校验流程。
 
 ## 特性
 
-- **全源码深度分析** — 将整个项目源码加载到 1M 上下文窗口中，生成真正理解代码的学习文档
+- **全源码深度分析** — 在当前上下文预算内尽可能加载核心源码；项目过大时退化为“分批加载 + 摘要保持”
 - **LSP 增强** — 自动检测 `compile_commands.json`，利用 LSP 获取精确的符号定义、引用和调用层次
 - **教科书风格输出** — 遵循「先整体后局部、先接口后实现、先主流程后边界、先概念后代码」四原则
-- **格式自动校验** — PostToolUse Hook 实时校验生成文档的链接、图表、代码块等格式规范
+- **双 CLI 校验** — Claude Code 使用 Write/Edit 后置校验；Codex 使用 Stop Hook 汇总校验
 - **性能 Profiling** — 记录工具调用日志，支持生成性能分析报告
 
 ## 快速开始
@@ -21,9 +21,9 @@ cd claude-code-study-skills/study-master-skill
 ```
 
 安装脚本会自动完成：
-1. 将 Skill 文件复制到 `~/.claude/skills/study-master/`
-2. 将 Hook 脚本复制到 `~/.claude/hooks/`
-3. 在 `~/.claude/settings/settings.json` 中注册格式校验 Hook
+1. 将 Skill 文件安装到 Claude Code 和 Codex 的 Skill 目录
+2. 复制并注册 Claude Code 的 Hook
+3. 复制并注册 Codex 的 Stop Hook，并启用 `codex_hooks`
 
 ### 项目结构要求
 
@@ -31,14 +31,14 @@ cd claude-code-study-skills/study-master-skill
 
 ```
 project-root/
-├── source/       # 源码目录
-├── specs/        # 协议规范文档
+├── source/       # 源码目录（二选一）
+├── specs/        # 协议规范文档（二选一）
 └── study/        # 生成的学习文档（自动创建）
 ```
 
 ### 使用
 
-在目标项目目录下启动 Claude Code，输入：
+在目标项目目录下启动 Claude Code 或 Codex，调用 `study-master` Skill 并提供主题名。Claude Code 可以直接输入：
 
 ```
 /study-master <topic>
@@ -66,8 +66,8 @@ project-root/
 ```
 Phase 1: 源码加载与分析
   ├─ 源码定位与环境准备
-  ├─ LSP 检测（C/C++ 项目）
-  ├─ 全源码深度分析（1M 上下文）
+  ├─ LSP 检测（按环境能力执行）
+  ├─ 全源码深度分析（上下文预算自适应）
   └─ 确定章节大纲
 
 Phase 2: 串行生成文档
@@ -86,13 +86,13 @@ study-master-skill/
 ├── SKILL.md                          # Skill 定义（核心）
 ├── install.sh                        # 一键安装脚本
 └── hooks/
-    ├── check-study_master.sh         # PostToolUse Hook 入口
+    ├── check-study_master.sh         # Claude/Codex Hook 入口
     └── validate_study_master.py      # 格式校验器
 ```
 
 ### 格式校验器
 
-`validate_study_master.py` 在每次 Write/Edit 操作后自动运行，检查项包括：
+`validate_study_master.py` 会在 Claude Code 的 Write/Edit 后置 Hook 或 Codex 的 Stop Hook 中运行，检查项包括：
 
 - Unicode 替换字符（U+FFFD）
 - Unicode 数学符号（应使用 LaTeX）
