@@ -8,3 +8,5 @@ __pycache__/
 # disallow docs directories anywhere in the repo
 /docs/
 **/docs/
+/doc/
+**/doc/
