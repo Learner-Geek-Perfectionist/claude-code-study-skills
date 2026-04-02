@@ -5,5 +5,13 @@ __pycache__/
 # macOS
 .DS_Store
 
-# docs (historical plans, not needed in repo)
-docs/
+# repo docs
+/docs/*
+!/docs/superpowers/
+/docs/superpowers/*
+!/docs/superpowers/specs/
+/docs/superpowers/specs/*
+!/docs/superpowers/specs/*.md
+
+# internal skill docs (historical plans, not tracked)
+/study-master-skill/docs/
