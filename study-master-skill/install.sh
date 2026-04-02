@@ -19,9 +19,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_NAME=$(grep '^name:' "$SCRIPT_DIR/SKILL.md" | head -1 | sed 's/name: *//')
 CLAUDE_TARGET_DIR="$CLAUDE_SKILLS_DIR/$SKILL_NAME"
 CODEX_TARGET_DIR="$CODEX_SKILLS_DIR/$SKILL_NAME"
+LEGACY_SKILL_NAME="study_master"
 
 echo "📦 Installing $SKILL_NAME skill..."
 echo ""
+
+remove_path_if_exists() {
+    local path="$1"
+    [ ! -e "$path" ] && return 0
+    rm -rf "$path"
+    echo "🧹 Removed legacy path: $path"
+}
 
 copy_optional_files() {
     local target_dir="$1"
@@ -29,6 +37,20 @@ copy_optional_files() {
     if [ -f "$SCRIPT_DIR/README.md" ]; then
         cp "$SCRIPT_DIR/README.md" "$target_dir/"
     fi
+}
+
+cleanup_legacy_skill_installs() {
+    echo "🧹 Cleaning legacy skill installs..."
+    mkdir -p "$CLAUDE_SKILLS_DIR" "$CODEX_SKILLS_DIR"
+
+    remove_path_if_exists "$CLAUDE_SKILLS_DIR/$LEGACY_SKILL_NAME"
+    remove_path_if_exists "$CLAUDE_SKILLS_DIR/${LEGACY_SKILL_NAME}.md"
+    remove_path_if_exists "$CLAUDE_SKILLS_DIR/${SKILL_NAME}.md"
+    remove_path_if_exists "$CODEX_SKILLS_DIR/$LEGACY_SKILL_NAME"
+    remove_path_if_exists "$CODEX_SKILLS_DIR/${LEGACY_SKILL_NAME}.md"
+    remove_path_if_exists "$CODEX_SKILLS_DIR/${SKILL_NAME}.md"
+
+    echo ""
 }
 
 install_claude_skill() {
@@ -51,6 +73,10 @@ install_claude_hooks() {
 
     echo "🔧 Installing Claude Code hooks..."
     mkdir -p "$CLAUDE_HOOKS_DIR"
+
+    for filename in generate_profiling_report.py profiling_hook.sh test_profiling_report.py; do
+        remove_path_if_exists "$CLAUDE_HOOKS_DIR/$filename"
+    done
 
     for file in "$SCRIPT_DIR/hooks"/*; do
         [ -f "$file" ] || continue
@@ -76,6 +102,7 @@ import os
 settings_file = os.path.expanduser("~/.claude/settings.json")
 hook_cmd = 'bash "$HOME/.claude/hooks/check-study_master.sh"'
 hook_timeout = 30
+desired_matcher = "Write|Edit"
 
 try:
     with open(settings_file, 'r', encoding='utf-8') as f:
@@ -87,33 +114,38 @@ hooks = settings.setdefault('hooks', {})
 post_tool_use = hooks.setdefault('PostToolUse', [])
 
 hook_entry = {"type": "command", "command": hook_cmd, "timeout": hook_timeout}
+normalized_matchers = []
 
-for tool in ["Write", "Edit"]:
-    # Find existing matcher for this tool
-    matcher = next((m for m in post_tool_use if m.get('matcher') == tool), None)
+for matcher in list(post_tool_use):
+    matcher_hooks = matcher.get('hooks') or []
+    kept_hooks = [hook for hook in matcher_hooks if hook.get('command') != hook_cmd]
+    if len(kept_hooks) != len(matcher_hooks):
+        normalized_matchers.append(matcher.get('matcher', '<unknown>'))
+        if kept_hooks:
+            matcher['hooks'] = kept_hooks
+        else:
+            post_tool_use.remove(matcher)
 
-    if matcher is None:
-        # Create new matcher
-        post_tool_use.append({"matcher": tool, "hooks": [dict(hook_entry)]})
-        print(f"✅ Added hook: PostToolUse/{tool}")
-        continue
+matcher = next((m for m in post_tool_use if m.get('matcher') == desired_matcher), None)
+if matcher is None:
+    matcher = {"matcher": desired_matcher, "hooks": []}
+    post_tool_use.append(matcher)
 
-    existing_hook = next((h for h in matcher.get('hooks', []) if h.get('command') == hook_cmd), None)
-    if existing_hook is None:
-        # Append hook to existing matcher
-        matcher.setdefault('hooks', []).append(dict(hook_entry))
-        print(f"✅ Added hook: PostToolUse/{tool}")
-        continue
-
-    updated = False
+existing_hook = next((h for h in matcher.get('hooks', []) if h.get('command') == hook_cmd), None)
+if existing_hook is None:
+    matcher.setdefault('hooks', []).append(dict(hook_entry))
+    action = "✅ Added hook"
+else:
+    action = "⏭️  Hook already exists"
     for key, value in hook_entry.items():
         if existing_hook.get(key) != value:
             existing_hook[key] = value
-            updated = True
-    if updated:
-        print(f"🔄 Updated hook settings: PostToolUse/{tool}")
-    else:
-        print(f"⏭️  Hook already exists: PostToolUse/{tool}")
+            action = "🔄 Updated hook settings"
+
+if normalized_matchers:
+    names = ", ".join(dict.fromkeys(normalized_matchers))
+    print(f"🧹 Normalized hook registrations: {names}")
+print(f"{action}: PostToolUse/{desired_matcher}")
 
 with open(settings_file, 'w', encoding='utf-8') as f:
     json.dump(settings, f, indent=2)
@@ -268,6 +300,7 @@ install_claude_skill
 install_claude_hooks
 register_claude_hooks
 
+cleanup_legacy_skill_installs
 install_codex_skill
 register_codex_hook
 enable_codex_hooks_feature
